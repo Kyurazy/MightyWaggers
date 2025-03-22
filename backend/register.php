@@ -59,8 +59,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <p>Already have an account? <a href="login.php">Login here</a></p>
 </div>
 
-<footer>
-    <p>&copy; 2025 Mighty Waggers. All rights reserved.</p>
-</footer>
-
 <?php include('footer.php'); ?>
