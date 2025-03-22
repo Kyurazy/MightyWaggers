@@ -24,5 +24,6 @@
                 <li><a href="login.php" class="nav-link">Login</a></li> 
             <?php endif; ?>
         </ul>
+        
     </nav>
 </header>

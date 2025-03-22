@@ -14,8 +14,6 @@ if (isset($_SESSION['user_id'])) {
     exit();
 }
 
-$error = '';
-
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $email = $_POST['email'];
     $password = $_POST['password'];
@@ -24,11 +22,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $stmt->execute(['email' => $email]);
     $user = $stmt->fetch();
 
-
     if ($user && password_verify($password, $user['password'])) {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['role'] = $user['role'];
         $_SESSION['username'] = $user['name']; 
+
+        $stmt = $pdo->prepare('INSERT INTO audit_logs (user_id, action) VALUES (:user_id, "login")');
+        $stmt->execute(['user_id' => $user['id']]);
+
         header('Location: index.php'); 
         exit();
     } else {
@@ -58,7 +59,5 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     <p>Don't have an account? <a href="register.php">Register here</a></p>
 </div>
-
-
 
 <?php include('footer.php'); ?>

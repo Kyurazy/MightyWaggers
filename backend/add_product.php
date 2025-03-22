@@ -1,9 +1,9 @@
 <?php
 session_start();
-require_once 'config.php'; 
+require_once '../backend/config.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
-    header('Location: login.php'); 
+    header('Location: ../login.php');
     exit();
 }
 
@@ -21,16 +21,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         'stock' => $stock,
         'description' => $description
     ])) {
+        $product_id = $pdo->lastInsertId();
+        $stmt = $pdo->prepare('INSERT INTO audit_logs (user_id, action) VALUES (:user_id, "create_product")');
+        $stmt->execute(['user_id' => $_SESSION['user_id']]);
+
         header('Location: admin_dashboard.php');
         exit();
     } else {
         $error = 'Failed to add product.';
     }
 }
-
 ?>
 
-<?php include('header.php');?>
+<?php include('../backend/header.php'); ?>
 
 <div class="content">
     <h2>Add New Product</h2>
@@ -56,4 +59,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </form>
 </div>
 
-<?php include('footer.php'); ?>
+<?php include('../backend/footer.php'); ?>

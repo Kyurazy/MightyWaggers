@@ -1,52 +1,50 @@
 <?php
 session_start();
-require_once '../backend/config.php';
+require_once 'config.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header('Location: login.php');
     exit();
 }
 
-$error = '';
 $product_id = $_GET['id'];
+$error = '';
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $name = $_POST['name'];
-    $price = $_POST['price'];
-    $stock = $_POST['stock'];
-    $description = $_POST['description'];
-    $image_url = $product_data['image_url']; 
+// Fetch product details from the database
+$stmt = $pdo->prepare('SELECT * FROM products WHERE id = :id');
+$stmt->execute(['id' => $product_id]);
+$product_data = $stmt->fetch();
 
-    if ($_FILES['image']['error'] === UPLOAD_ERR_OK) {
-        $upload_dir = 'uploads/';
-        $upload_file = $upload_dir . basename($_FILES['image']['name']);
-        
-        if (move_uploaded_file($_FILES['image']['tmp_name'], $upload_file)) {
-            $image_url = $upload_file;
+if (!$product_data) {
+    $error = 'Product not found!';
+} else {
+    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+        $name = $_POST['name'];
+        $price = $_POST['price'];
+        $stock = $_POST['stock'];
+        $description = $_POST['description'];
+
+        // Update the product in the database
+        $stmt = $pdo->prepare('UPDATE products SET name = :name, price = :price, stock = :stock, description = :description WHERE id = :id');
+        if ($stmt->execute([
+            'id' => $product_id,
+            'name' => $name,
+            'price' => $price,
+            'stock' => $stock,
+            'description' => $description
+        ])) {
+            // Log action in audit logs
+            $stmt = $pdo->prepare('INSERT INTO audit_logs (user_id, action) VALUES (:user_id, "update_product")');
+            $stmt->execute(['user_id' => $_SESSION['user_id']]);
+
+            header('Location: admin_dashboard.php');
+            exit();
         } else {
-            $error = 'Failed to upload image.';
+            $error = 'Failed to update product.';
         }
-    }
-
-    $stmt = $pdo->prepare('UPDATE products SET name = :name, price = :price, stock = :stock, description = :description, image_url = :image_url WHERE id = :id');
-    if ($stmt->execute([
-        'id' => $product_id,
-        'name' => $name,
-        'price' => $price,
-        'stock' => $stock,
-        'description' => $description,
-        'image_url' => $image_url
-    ])) {
-        header('Location: admin_dashboard.php');
-        exit();
-    } else {
-        $error = 'Failed to update product.';
     }
 }
 
-$product = $pdo->prepare('SELECT * FROM products WHERE id = :id');
-$product->execute(['id' => $product_id]);
-$product_data = $product->fetch();
 ?>
 
 <?php include('header.php'); ?>
@@ -58,7 +56,7 @@ $product_data = $product->fetch();
         <div class="alert alert-danger"><?php echo $error; ?></div>
     <?php endif; ?>
 
-    <form method="POST" action="edit_product.php?id=<?php echo $product_id; ?>" enctype="multipart/form-data">
+    <form method="POST" action="edit_product.php?id=<?php echo $product_id; ?>">
         <label for="name">Name</label>
         <input type="text" name="name" id="name" value="<?php echo $product_data['name']; ?>" required>
 
@@ -73,7 +71,6 @@ $product_data = $product->fetch();
 
         <label for="image">Product Image</label>
         <input type="file" name="image" id="image">
-
         <?php if ($product_data['image_url']): ?>
             <p>Current Image: <img src="<?php echo $product_data['image_url']; ?>" alt="Product Image" style="max-width: 200px; max-height: 200px;"></p>
         <?php endif; ?>
